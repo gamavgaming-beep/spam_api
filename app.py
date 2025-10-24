@@ -58,7 +58,7 @@ def send_requests():
     results = {"success": 0, "failed": 0}
     threads = []
 
-    for token in tokens[:110]:  # Maksimum 100 istek gönder
+    for token in tokens[:100]:  # Maksimum 100 istek gönder
         thread = threading.Thread(target=send_friend_request, args=(uid, token, results))
         threads.append(thread)
         thread.start()
