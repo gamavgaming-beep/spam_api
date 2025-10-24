@@ -9,7 +9,7 @@ app = Flask(__name__)
 # Tokenleri dosyadan yükleme fonksiyonu
 def load_tokens():
     try:
-        with open("token_bd.json", "r") as file:
+        with open("token_ind.json", "r") as file:
             data = json.load(file)
         tokens = [item["token"] for item in data]  # JSON'dan tokenleri çıkar
         return tokens
