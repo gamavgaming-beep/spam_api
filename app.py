@@ -7,30 +7,21 @@ from byte import Encrypt_ID, encrypt_api
 app = Flask(__name__)
 
 def load_tokens():
-    regions = ["ind", "br", "sg", "ru", "id", "tw", "us", "vn", "th", "me", "pk", "cis", "bd", "sac"]
-    all_tokens = []
-    
-    for region in regions:
-        file_name = f"spam_{region}.json"
-        try:
-            with open(file_name, "r") as file:
-                data = json.load(file)
-            # Append a tuple (region, token) for each token in the file
-            tokens = [(region, item["token"]) for item in data]
-            all_tokens.extend(tokens)
-        except Exception as e:
-            print(f"Error loading tokens from {file_name}: {e}")
-    
-    return all_tokens
+    try:
+        with open("spam_ind.json", "r") as file:
+            data = json.load(file)
+        tokens = [item["token"] for item in data]  
+        return tokens
+    except Exception as e:
+        print(f"Error loading tokens: {e}")
+        return []
 
-def send_friend_request(uid, region, token, results):
-    # Encrypt the uid and generate the payload
+def send_friend_request(uid, token, results):
     encrypted_id = Encrypt_ID(uid)
     payload = f"08a7c4839f1e10{encrypted_id}1801"
     encrypted_payload = encrypt_api(payload)
-    
-    # Build the URL dynamically based on the region
-    url = f"https://clientbp.ggblueshark.com/GetPlayerPersonalShow"
+
+    url = "https://client.ind.freefiremobile.com/RequestAddingFriend"
     headers = {
         "Expect": "100-continue",
         "Authorization": f"Bearer {token}",
@@ -40,19 +31,16 @@ def send_friend_request(uid, region, token, results):
         "Content-Type": "application/x-www-form-urlencoded",
         "Content-Length": "16",
         "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 9; SM-N975F Build/PI)",
-        "Host": "https://clientbp.ggblueshark.com",
+        "Host": "clientbp.ggblueshark.com",
         "Connection": "close",
         "Accept-Encoding": "gzip, deflate, br"
     }
 
-    try:
-        response = requests.post(url, headers=headers, data=bytes.fromhex(encrypted_payload))
-        if response.status_code == 200:
-            results["success"] += 1
-        else:
-            results["failed"] += 1
-    except Exception as e:
-        print(f"Error sending request for region {region} with token {token}: {e}")
+    response = requests.post(url, headers=headers, data=bytes.fromhex(encrypted_payload))
+
+    if response.status_code == 200:
+        results["success"] += 1
+    else:
         results["failed"] += 1
 
 @app.route("/send_requests", methods=["GET"])
@@ -62,23 +50,23 @@ def send_requests():
     if not uid:
         return jsonify({"error": "uid parameter is required"}), 400
 
-    tokens_with_region = load_tokens()
-    if not tokens_with_region:
-        return jsonify({"error": "No tokens found in any token file"}), 500
+    tokens = load_tokens()
+    if not tokens:
+        return jsonify({"error": "No tokens found in spam_ind.json"}), 500
 
     results = {"success": 0, "failed": 0}
     threads = []
 
-    # Iterate over tokens from all regions (limit to first 110 requests if desired)
-    for region, token in tokens_with_region[:100]:
-        thread = threading.Thread(target=send_friend_request, args=(uid, region, token, results))
+    for token in tokens[:110]:
+        thread = threading.Thread(target=send_friend_request, args=(uid, token, results))
         threads.append(thread)
         thread.start()
 
     for thread in threads:
         thread.join()
 
-    status = 1 if results["success"] != 0 else 2  # If at least one success, status is 1; otherwise 2
+    total_requests = results["success"] + results["failed"]
+    status = 1 if results["success"] != 0 else 2
 
     return jsonify({
         "success_count": results["success"],
