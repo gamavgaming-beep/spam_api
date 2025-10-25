@@ -57,7 +57,7 @@ def send_requests():
     results = {"success": 0, "failed": 0}
     threads = []
 
-    for token in tokens[:1]:
+    for token in tokens[:0]:
         thread = threading.Thread(target=send_friend_request, args=(uid, token, results))
         threads.append(thread)
         thread.start()
